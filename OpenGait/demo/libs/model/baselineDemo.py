@@ -18,7 +18,7 @@ import os.path as osp
 import numpy as np
 import torch.utils.data as tordata
 from .transform import get_transform
-from utils import get_valid_args, is_list, is_dict, np2var, ts2np, list2var, get_attr_from, is_list_or_tuple
+from utils import get_valid_args, is_list, is_dict, np2var, ts2np, list2var, get_attr_from, is_list_or_tuple, get_device
 from .dataset import DataSet
 
 model_cfgs = {  
@@ -285,10 +285,8 @@ class BaselineDemo(nn.Module):
         #     self.test_loader = self.get_loader(
         #         cfgs['data_cfg'])
 
-        self.device = torch.cuda.current_device()
-        torch.cuda.set_device(self.device)
-        self.to(device=torch.device(
-            "cuda", self.device))
+        self.device = get_device()
+        self.to(device=self.device)
 
         # self.train(training)
         restore_hint = self.engine_cfg['restore_hint']
@@ -333,8 +331,8 @@ class BaselineDemo(nn.Module):
 
     def _load_ckpt(self, save_name):
         load_ckpt_strict = self.engine_cfg['restore_ckpt_strict']
-        checkpoint = torch.load(save_name, map_location=torch.device(
-            "cuda"))
+        map_location = torch.device('cpu') if self.device.type == 'mps' else self.device
+        checkpoint = torch.load(save_name, map_location=map_location)
         model_state_dict = checkpoint['model']
         self.load_state_dict(model_state_dict, strict=load_ckpt_strict)
 

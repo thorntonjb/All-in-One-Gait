@@ -4,4 +4,4 @@ $ cat .gitignore
 .DS_Store
 **/.DS_Store
 .DS_Store?
-
+venv3.10

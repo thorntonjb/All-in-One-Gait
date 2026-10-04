@@ -2,19 +2,20 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 
-from utils import is_tensor
+from utils import is_tensor, get_device
 
 
 def cuda_dist(x, y, metric='euc'):
-    x = torch.from_numpy(x).cuda()
-    y = torch.from_numpy(y).cuda()
+    device = get_device()
+    x = torch.from_numpy(x).to(device)
+    y = torch.from_numpy(y).to(device)
     if metric == 'cos':
         x = F.normalize(x, p=2, dim=1)  # n c p
         y = F.normalize(y, p=2, dim=1)  # n c p
     num_bin = x.size(2)
     n_x = x.size(0)
     n_y = y.size(0)
-    dist = torch.zeros(n_x, n_y).cuda()
+    dist = torch.zeros(n_x, n_y, device=device)
     for i in range(num_bin):
         _x = x[:, :, i]
         _y = y[:, :, i]
@@ -29,9 +30,9 @@ def cuda_dist(x, y, metric='euc'):
 
 def mean_iou(msk1, msk2, eps=1.0e-9):
     if not is_tensor(msk1):
-        msk1 = torch.from_numpy(msk1).cuda()
+        msk1 = torch.from_numpy(msk1).to(get_device())
     if not is_tensor(msk2):
-        msk2 = torch.from_numpy(msk2).cuda()
+        msk2 = torch.from_numpy(msk2).to(get_device())
     n = msk1.size(0)
     inter = msk1 * msk2
     union = ((msk1 + msk2) > 0.).float()

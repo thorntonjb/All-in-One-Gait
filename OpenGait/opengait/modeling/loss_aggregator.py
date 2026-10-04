@@ -2,7 +2,7 @@
 
 import torch
 from . import losses
-from utils import is_dict, get_attr_from, get_valid_args, is_tensor, get_ddp_module
+from utils import is_dict, get_attr_from, get_valid_args, is_tensor, get_ddp_module, get_device
 from utils import Odict
 from utils import get_msg_mgr
 
@@ -38,7 +38,7 @@ class LossAggregator():
         Loss = get_attr_from([losses], loss_cfg['type'])
         valid_loss_arg = get_valid_args(
             Loss, loss_cfg, ['type', 'gather_and_scale'])
-        loss = get_ddp_module(Loss(**valid_loss_arg).cuda())
+        loss = get_ddp_module(Loss(**valid_loss_arg).to(get_device()))
         return loss
 
     def __call__(self, training_feats):

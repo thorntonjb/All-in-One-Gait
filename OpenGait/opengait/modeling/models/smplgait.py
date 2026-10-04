@@ -50,8 +50,7 @@ class SMPLGait(BaseModel):
         sps = sps.reshape(n, 1, s, 16, 16)
         iden = Variable(torch.eye(16)).unsqueeze(
             0).repeat(n, 1, s, 1, 1)   # [n, 1, s, 16, 16]
-        if sps.is_cuda:
-            iden = iden.cuda()
+        iden = iden.to(sps.device)
         sps_trans = sps + iden   # [n, 1, s, 16, 16]
 
         if len(sils.size()) == 4:
@@ -63,8 +62,7 @@ class SMPLGait(BaseModel):
 
         zero_tensor = Variable(torch.zeros(
             (outs_n, outs_c, outs_s, outs_h, outs_h-outs_w)))
-        if outs.is_cuda:
-            zero_tensor = zero_tensor.cuda()
+        zero_tensor = zero_tensor.to(outs.device)
         # [n, s, c, h, h]  [n, s, c, 16, 16]
         outs = torch.cat([outs, zero_tensor], -1)
         outs = outs.reshape(outs_n*outs_c*outs_s, outs_h,

@@ -3,19 +3,20 @@ from time import strftime, localtime
 import torch
 import numpy as np
 import torch.nn.functional as F
-from utils import get_msg_mgr, mkdir, MeanIOU
+from utils import get_msg_mgr, mkdir, MeanIOU, get_device
 
 
 def cuda_dist(x, y, metric='euc'):
-    x = torch.from_numpy(x).cuda()
-    y = torch.from_numpy(y).cuda()
+    device = get_device()
+    x = torch.from_numpy(x).to(device)
+    y = torch.from_numpy(y).to(device)
     if metric == 'cos':
         x = F.normalize(x, p=2, dim=1)  # n c p
         y = F.normalize(y, p=2, dim=1)  # n c p
     num_bin = x.size(2)
     n_x = x.size(0)
     n_y = y.size(0)
-    dist = torch.zeros(n_x, n_y).cuda()
+    dist = torch.zeros(n_x, n_y, device=device)
     for i in range(num_bin):
         _x = x[:, :, i]
         _y = y[:, :, i]

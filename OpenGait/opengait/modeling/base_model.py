@@ -29,7 +29,7 @@ from data.collate_fn import CollateFn
 from data.dataset import DataSet
 import data.sampler as Samplers
 from utils import Odict, mkdir, ddp_all_gather
-from utils import get_valid_args, is_list, is_dict, np2var, ts2np, list2var, get_attr_from
+from utils import get_valid_args, is_list, is_dict, np2var, ts2np, list2var, get_attr_from, get_device
 from evaluation import evaluator as eval_functions
 from utils import NoOp
 from utils import get_msg_mgr
@@ -155,10 +155,10 @@ class BaseModel(MetaModel, nn.Module):
             self.test_loader = self.get_loader(
                 cfgs['data_cfg'], train=False)
 
-        self.device = torch.distributed.get_rank()
-        torch.cuda.set_device(self.device)
-        self.to(device=torch.device(
-            "cuda", self.device))
+        self.device = get_device()
+        if self.device.type == 'cuda':
+            torch.cuda.set_device(self.device)
+        self.to(device=self.device)
 
         if training:
             self.loss_aggregator = LossAggregator(cfgs['loss_cfg'])
@@ -248,8 +248,7 @@ class BaseModel(MetaModel, nn.Module):
     def _load_ckpt(self, save_name):
         load_ckpt_strict = self.engine_cfg['restore_ckpt_strict']
 
-        checkpoint = torch.load(save_name, map_location=torch.device(
-            "cuda", self.device))
+        checkpoint = torch.load(save_name, map_location=self.device)
         model_state_dict = checkpoint['model']
 
         if not load_ckpt_strict:

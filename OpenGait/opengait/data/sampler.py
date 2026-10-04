@@ -57,6 +57,8 @@ def sync_random_sample_list(obj_list, k):
         idx = torch.randperm(len(obj_list))[:k]
     if torch.cuda.is_available():
         idx = idx.cuda()
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        idx = idx.to('mps')
     torch.distributed.broadcast(idx, src=0)
     idx = idx.tolist()
     return [obj_list[i] for i in idx]

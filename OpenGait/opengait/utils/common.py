@@ -98,12 +98,23 @@ def is_array(x):
     return isinstance(x, np.ndarray)
 
 
+def get_device():
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        return torch.device('mps')
+    return torch.device('cpu')
+
+
 def ts2np(x):
     return x.cpu().data.numpy()
 
 
 def ts2var(x, **kwargs):
-    return autograd.Variable(x, **kwargs).cuda()
+    device = get_device()
+    if device.type == 'mps' and x.dtype == torch.float64:
+        x = x.float()
+    return autograd.Variable(x, **kwargs).to(device)
 
 
 def np2var(x, **kwargs):
@@ -148,7 +159,8 @@ def init_seeds(seed=0, cuda_deterministic=True):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
     # Speed-reproducibility tradeoff https://pytorch.org/docs/stable/notes/randomness.html
     if cuda_deterministic:  # slower, more reproducible
         torch.backends.cudnn.deterministic = True
@@ -194,9 +206,13 @@ def get_ddp_module(module, **kwargs):
     if len(list(module.parameters())) == 0:
         # for the case that loss module has not parameters.
         return module
-    device = torch.cuda.current_device()
-    module = DDPPassthrough(module, device_ids=[device], output_device=device,
-                            find_unused_parameters=False, **kwargs)
+    device = get_device()
+    if device.type == 'cuda':
+        module = DDPPassthrough(module, device_ids=[device.index or 0],
+                                output_device=device.index or 0,
+                                find_unused_parameters=False, **kwargs)
+    else:
+        module = DDPPassthrough(module, find_unused_parameters=False, **kwargs)
     return module
 
 
@@ -207,9 +223,9 @@ def params_count(net):
 
 def MeanIOU(msk1, msk2, eps=1.0e-9):
     if not is_tensor(msk1):
-        msk1 = torch.from_numpy(msk1).cuda()
+        msk1 = torch.from_numpy(msk1).to(get_device())
     if not is_tensor(msk2):
-        msk2 = torch.from_numpy(msk2).cuda()
+        msk2 = torch.from_numpy(msk2).to(get_device())
     n = msk1.size(0)
     inter = msk1 * msk2
     union = ((msk1 + msk2) > 0.).float()

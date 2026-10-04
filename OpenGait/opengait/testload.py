@@ -9,7 +9,8 @@ from modeling import models
 from main import initialization
 from utils import config_loader
 
-torch.distributed.init_process_group('nccl', init_method='env://')
+backend = 'nccl' if torch.cuda.is_available() else 'gloo'
+torch.distributed.init_process_group(backend, init_method='env://')
 
 
 def loadModel(model_type, cfg_path):

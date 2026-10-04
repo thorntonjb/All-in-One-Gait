@@ -57,10 +57,12 @@ def run_model(cfgs, training):
 
 
 if __name__ == '__main__':
-    torch.distributed.init_process_group('nccl', init_method='env://')
-    if torch.distributed.get_world_size() != torch.cuda.device_count():
+    backend = 'nccl' if torch.cuda.is_available() else 'gloo'
+    torch.distributed.init_process_group(backend, init_method='env://')
+    available_devices = torch.cuda.device_count() if torch.cuda.is_available() else 1
+    if torch.distributed.get_world_size() != available_devices:
         raise ValueError("Expect number of availuable GPUs({}) equals to the world size({}).".format(
-            torch.cuda.device_count(), torch.distributed.get_world_size()))
+            available_devices, torch.distributed.get_world_size()))
     cfgs = config_loader(opt.cfgs)
     if opt.iter != 0:
         cfgs['evaluator_cfg']['restore_hint'] = int(opt.iter)

@@ -32,6 +32,12 @@ track_cfgs = {
     "device": "gpu",
     "save_result": "True",
 }
+
+def get_device():
+    if track_cfgs["device"] == "gpu" and torch.cuda.is_available():
+        return torch.device("cuda")
+    return torch.device("cpu")
+
 colors = [(255,0,0),(0,255,0),(0,0,255),(0,0,0)]
 def get_color(idx):
     if idx<=4:
@@ -42,7 +48,7 @@ def get_color(idx):
     return color
 
 def loadckpt(exp):
-    device = torch.device("cuda" if track_cfgs["device"] == "gpu" else "cpu")
+    device = get_device()
     model = exp.get_model().to(device)
     logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
     model.eval()
@@ -54,7 +60,8 @@ def loadckpt(exp):
 
     logger.info("\tFusing model...")
     model = fuse_model(model)
-    model = model.half()
+    if device.type != "cpu":
+        model = model.half()
     return model
 
 exp = get_exp(track_cfgs["model"]["exp_file"], None)
@@ -71,8 +78,8 @@ def track(video_path, video_save_folder):
     """
     trt_file = None
     decoder = None
-    device = torch.device("cuda" if track_cfgs["device"] == "gpu" else "cpu")
-    predictor = Predictor(model, exp, trt_file, decoder, device, True)
+    device = get_device()
+    predictor = Predictor(model, exp, trt_file, decoder, device, device.type != "cpu")
 
     cap = cv2.VideoCapture(video_path)
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
@@ -155,10 +162,10 @@ def writeresult(pgdict, video_path, video_save_folder):
         video_path (Path): Path of input video
         video_save_folder (Path): Tracking video storage root path after processing
     """
-    device = torch.device("cuda" if track_cfgs["device"] == "gpu" else "cpu")
+    device = get_device()
     trt_file = None
     decoder = None
-    predictor = Predictor(model, exp, trt_file, decoder, device, True)
+    predictor = Predictor(model, exp, trt_file, decoder, device, device.type != "cpu")
     cap = cv2.VideoCapture(video_path)
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)  # float
